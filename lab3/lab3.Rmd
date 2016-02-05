@@ -1,0 +1,386 @@
+##Laboratorio 3 - Bruno Mitio A. Silva
+
+# Questoees iniciais
+
+```{r}
+library(nycflights13)
+library(dplyr)
+library(magrittr)
+tbl_df(flights)
+library(tidyr)
+library(boot)
+```
+
+- filter
+
+Atribua a uma tabela apenas os voos de janeiro de 2013.
+
+Atribua a uma tabela apenas os voos de janeiro ou fevereiro de 2013.
+
+Atribua a uma tabela apenas os voos com distancia maior do que 1000 milhas.
+```{r}
+fil1 <- flights %>%
+  filter(year=='2013')
+tbl_df(fil1)
+
+fil2 <- flights %>% 
+  filter((year=='2013'& month==1)|(year=='2013'& month==2))
+tbl_df(fil2)
+
+fil3 <- flights %>% 
+  filter(distance>1000)
+tbl_df(fil3)
+```
+
+- select
+
+Atribua a uma tabela apenas as colunas month e dep_delay.
+
+Atribua a uma tabela apenas as colunas month e dep_delay, os nomes dessas colunas devem ser mese atraso.
+
+Retire da tabela as colunas tailnum, origin e dest
+```{r}
+sel1 <- flights %>%
+  select(month, dep_delay)
+tbl_df(sel1)
+
+sel2 <- flights %>% 
+  select(mes = month, atraso = dep_delay)
+tbl_df(sel2)
+
+sel2 <- flights %>% 
+  select(-tailnum, -origin, -dest)
+tbl_df(sel2)
+```
+
+
+- mutate
+
+Calcule as colunas ganho_de_tempo que e dado por dep_delay - arr_delay e velocidade dada por distance / air_time * 60.
+
+Calcule o horario de chegada considerando as colunas hour, minute e air_time. 
+
+A tabela deve conter duas colunas novas: hour2 com a hora de chegada e minute2 com o minuto de chegada.
+```{r}
+
+mut1 <- flights %>% 
+  mutate(ganho_de_tempo = dep_delay - arr_delay,
+         velocidade = distance / air_time*60)
+tbl_df(mut1)
+
+mut2 <- flights %>%
+  mutate(hour2 = round(hour + air_time/60),
+         minute2 = minute + (air_time/60) - round(air_time/60)) 
+
+mut2a <- mut2 %>% 
+  filter(hour2 > 24) %>% 
+  mutate(hour2 = hour2 - 24)
+
+mut2b <- mut2 %>% 
+  filter(hour2 <= 24)
+
+mut2 <- rbind(mut2a,mut2b)
+tbl_df(mut2)
+```
+
+- summarise
+
+Calcule a media da distancia de todos os voos.
+
+Calcule a media da distancia dos voos por mes
+
+Calcule a media, mediana, primeiro quartil e terceiro quartil do tempo de viagem por mes.
+
+```{r}
+summ1 <- flights %>%
+  summarise(media = mean(distance))
+summ1
+
+summ2 <- flights %>% 
+  group_by(month) %>% 
+  summarise(media = mean(distance))
+summ2
+
+summ3 <- flights %>% 
+  group_by(month) %>% 
+  summarise(media = mean(distance),
+            mediana = median(distance),
+            q1 = quantile(distance,probs =0.25),
+            q3 = quantile(distance, probs = 0.75))
+summ3
+```
+
+- arrange
+
+Ordene a base de dados pelo atraso na partida em ordem crescente.
+
+Repita a questao anterior, porem na ordem decrescente.
+
+```{r}
+arr1 <- flights %>%
+  select(year, month, origin, dest, distance) %>% 
+  arrange(distance)
+tbl_df(arr1)
+
+arr2 <- flights %>%
+  select(year, month, origin, dest, distance) %>% 
+  arrange(desc(distance))
+tbl_df(arr2)
+```
+
+- spread
+
+Crie uma tabela em que cada linha é um dia e cada coluna é o atraso médio de partida por mês.
+
+Repita a mesma operação, mas dessa vez cada coluna será uma hora do dia.
+
+```{r}
+spr1<- flights %>% 
+  group_by(day, month) %>% 
+  summarise(media_dia = mean(dep_delay, na.rm = T)) %>% 
+  ungroup() %>% 
+  spread(month, media_dia)
+tbl_df(spr1)
+
+spr2<- flights %>%  
+  group_by(day, hour) %>%
+  summarise(media = mean(dep_delay, na.rm = T)) %>% 
+  ungroup() %>% 
+  spread(day, media)
+tbl_df(spr2)
+```
+
+- gather
+
+Considerando as tabelas criadas nas perguntas sobre o spread, transforme-as em um formato tidy.
+
+```{r}
+gat1 <- spr1 %>% 
+  gather(month, day)
+tbl_df(gat1)
+
+```
+
+# Desafios
+
+- Atraso Total no Mes
+
+Sumarise em uma tabela qual foi a média de atraso total e seu intervalo de confiança por mes, apenas considerando os voos que atrasaram 
+
+```{r}
+atrasoMes1 <- flights %>% 
+  mutate( atrasoTot = dep_delay + arr_delay) %>%
+  filter(atrasoTot >= 0) %>% 
+  group_by(month) %>% 
+  summarise(n = length(atrasoTot),
+            media = mean(atrasoTot, na.rm = TRUE),
+            desv = sd(atrasoTot, na.rm = TRUE),
+            erro = qnorm(0.975) * desv / sqrt(n),
+            IC0 = round(media - erro, 4),
+            IC1 = round(media + erro, 4),
+            IC = paste(IC0, "  -  ", IC1))
+atrasoMes <- atrasoMes1 %>% 
+  select(mes = month, media, IC)
+atrasoMes
+```
+
+- Maiores atrasos
+
+Summarise em uma tabela quais foram os 10 destinos com mais viagens com atraso superior a 60 minutos. Considere o atraso total definido na pergunta anterior.
+
+```{r}
+atraso <- flights %>%
+  group_by(dest) %>% 
+  summarise(viagens = length(dest),
+            atrasoTotal = sum(dep_delay, arr_delay, na.rm = T))%>%
+  filter(atrasoTotal > 60) %>% 
+  arrange(desc(atrasoTotal))
+atraso<- atraso[1:10,1:3]  
+atraso  
+```
+
+# Outras bases de dados reais
+
+#Coalitions
+
+```{r}
+data(wto_data , package='abjutils')
+data(wto_dyad_sample, package='abjutils')
+tbl_df(wto_data)
+str(wto_data)
+tbl_df(wto_dyad_sample)
+str(wto_dyad_sample)
+```
+
+Qual e a unidade observacional (o que identifica uma observacao) na base wto_data?
+
+R: Sao informacoes basicas de cada pais para um dado periodo do tempo.
+
+Quantas coalizoes tivemos em cada ano?
+```{r}
+coal1 <- wto_dyad_sample %>% 
+  group_by(year)
+sum(coal1$coalition)
+```
+
+Qual e o codigo do pais que entrou mais vezes em alguma coalizao?
+```{r}
+coal2a <- wto_dyad_sample %>%
+  select(ccode = ccode1, ccoalition:coalition)
+coal2b <- wto_dyad_sample %>%
+  select(ccode = ccode2, ccoalition:coalition)
+coal2 <- rbind(coal2a, coal2b)
+coal2 <- coal2%>% 
+  group_by(ccode) %>% 
+  summarise(coalizoes = sum(coalition)) %>% 
+  arrange(desc(coalizoes))
+coal2max <- coal2[1:1,1:2]
+coal2max
+```
+
+Construa uma matriz de adjacencias usando dplyr e tidyr.
+
+Obs: Como ficaria muito grande uma matriz com todos os anos e coalizoes, separamos uma matriz de adjacencias no ano de 2001 para as coalizoes de numero 54. 
+A escolha foi feita por ser o ano e a coalizao com maiores ocorrencias de acordos.
+
+```{r}
+wto_adj <- wto_dyad_sample %>%
+  filter(year==2001, ccoalition ==54, ccode2!=100) %>% 
+  select(ccode1, ccode2, coalition) %>%
+  spread(ccode1, coalition)
+wto_adj[is.na(wto_adj)]<- 0
+linhas <- wto_adj$ccode2
+wto_adj$ccode2 <- NULL
+rownames(wto_adj) <- linhas
+
+tbl_df(wto_adj)
+str(wto_adj)
+```
+
+#CARF
+
+```{r}
+data(carf, package='abjutils')
+```
+
+Quantos processos temos na base de dados?
+```{r}
+length(unique(carf$n_processo))
+```
+
+Construa uma tabela contendo o volume de acordaos em cada ano. Voce nota algum ano com comportamento estranho?
+
+```{r}
+carf1 <- carf %>%
+  group_by(ano) %>% 
+  summarise(acordaos = length(id))
+carf1
+
+library(ggplot2)
+
+ggplot(carf1, aes(x = ano, y = acordaos))+
+  geom_count()
+
+```
+
+R: Sim. Como e possivel observar na tabela e no grafico acima, 2009 foi um ano atipico (outlier).
+
+
+Agora retire da base os acordaos que contem texto da decisao e texto da ementa vazios. Refaca a tabela e interprete.
+
+```{r}
+carf2 <- carf %>% 
+  filter(txt_ementa != "", txt_decisao !="") %>% 
+  group_by(ano) %>% 
+  summarise(acordaos = length(id))
+carf2
+
+ggplot(carf2, aes(x = ano, y = acordaos))+
+  geom_count()
+
+```
+
+Quando eliminamos os acordaos que contenham texto da decisao e texto da ementa vazios, 2009 deixa de ser um ano outlier. Provavelmente, a maior parte do grande numero de acordaos em 2009 eram compostos por textos de decisao e emenda vazios.
+
+
+Utilizando a funcao str_detect(), crie colunas (que valem TRUE ou FALSE) 
+```{r}
+library(stringr)
+
+carf3 <- carf %>%
+  mutate(negar_provimento = str_detect(txt_decisao, "negar?(do)? (o )?provimento|negou se (o )?provimento|recurso nao provido"),
+         dar_provimento = str_detect(txt_decisao, "dar?(do)? (o )?provimento|deu se (o )?provimento|recurso provido"),
+         em_parte = str_detect(txt_decisao, "em parte|parcial"),
+         diligencia = str_detect(txt_decisao, "diligencia"),
+         nao_conhecer = str_detect(txt_decisao, "conhec"),
+         anular = str_detect(txt_decisao,"nul(a|o|i)"))
+tbl_df(carf3)
+```
+
+Faca uma tabela mostrando a quantidade de acordaos em que foi dado provimento, negado provimento, etc. Considere somente os casos em que tipo_recurso foi recurso voluntario
+
+```{r}
+negar_provimento <- c(table(carf3$negar_provimento))
+dar_provimento <- c(table(carf3$dar_provimento))  
+em_parte <- c(table(carf3$em_parte))
+diligencia <- c(table(carf3$diligencia))
+nao_conhecer <- c(table(carf3$nao_conhecer))
+anular <- c(table(carf3$anular))
+
+voluntario <- cbind(negar_provimento,dar_provimento,em_parte,diligencia,nao_conhecer,anular)
+voluntario <- data.frame(voluntario)
+voluntario <- t(voluntario) 
+voluntario  
+```
+
+#SABESP
+```{r}
+data(sabesp, package='abjutils')
+sabesp <- sabesp
+
+```
+
+Descreva a base de dados.
+
+O banco de dados "sabesp" reune, para cada dia da serie, a media historica de volume do reservatorio no mes; a pluviometria do dia e acumulada no mes; e o volume percentual do reservatorio no dia.
+
+Crie uma tabela descritiva (media, desvio padrao, mediana, quartis, maximo, minimo) por mes, mostrando os lugares separadamente.
+
+```{r}
+sab1 <- sabesp %>% 
+  mutate(ano = substr(data, 1,4),
+         dia = substr(data, 9,10),
+         mes = substr(data, 6,7))
+
+sab2 <- sab1 %>%
+  select(lugar, mes, pluviometria_do_dia) %>% 
+  group_by(lugar, mes) %>% 
+  summarise(media_pluviometria = mean(pluviometria_do_dia),
+            desvio_pluviometria = sd(pluviometria_do_dia),
+            mediana_pluviometria = median(pluviometria_do_dia),
+            q1 = quantile(pluviometria_do_dia,probs =0.25),
+            q3 = quantile(pluviometria_do_dia, probs = 0.75),
+            maximo_pluviometria = which.max(pluviometria_do_dia),
+            minimo_pluviometria = which.min(pluviometria_do_dia))
+sab2
+```
+
+Construa uma tabela descritiva contendo a media, mediana, desvio padrao, primeiro e terceiro quartis em relacao a pluviometria, agrupando por ano e por lugar.
+
+```{r}
+sab3 <- sab1 %>%
+  select(lugar, ano, pluviometria_do_dia) %>% 
+  group_by(lugar, ano) %>% 
+  summarise(media_pluviometria = mean(pluviometria_do_dia),
+            desvio_pluviometria = sd(pluviometria_do_dia),
+            mediana_pluviometria = median(pluviometria_do_dia),
+            q1 = quantile(pluviometria_do_dia,probs =0.25),
+            q3 = quantile(pluviometria_do_dia, probs = 0.75),
+            maximo_pluviometria = which.max(pluviometria_do_dia),
+            minimo_pluviometria = which.min(pluviometria_do_dia))
+sab3
+```
+
+Comente sobre a crise hidrica em Sao Paulo com base em conhecimentos proprios e usando os dados da sabesp
+
+Como observamos na tabela acima, 2014 foi um ano atipico com relacao a media de chuvas. Para a nossa sorte, 2015 tambem mas no sentido oposto: choveu mais do que a meia dos anos anteriores. Tal fato, no entanto, ainda e preocupante com relacao a gestao de recursos hidricos, que parece mais depender dos intemperes da natureza do que de melhorias na eficiencia da geracao e distribuicao de recursos para o provimento publico.
