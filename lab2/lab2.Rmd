@@ -1,0 +1,201 @@
+#Laboratório 02 - Bruno Mitio A. Silva
+
+## Parte 1 - Leitura de Dados
+
+Abrimos todos os arquivos e apresentamos o resumo das 10 primeiras variaveis, conforme abaixo:
+
+- csv
+```{r}
+pnud.csv <- read.csv(file = 'C://Users/Mitio/Desktop/Curso R/daddos ex2/pnud.csv', header = T, sep = ",", dec = ".")
+
+summary(pnud.csv[,1:10])
+```
+
+- segunda forma de abrir o csv
+```{r}
+pnud.csv2 <- read.csv(file = 'C://Users/Mitio/Desktop/Curso R/daddos ex2/pnud2.csv', header = T, sep = ";", dec = ",") 
+
+summary(pnud.csv2[,1:10])
+```
+
+- txt
+```{r}
+pnud.txt <- read.table(file = 'C://Users/Mitio/Desktop/Curso R/daddos ex2/pnud.txt', header = T, sep = " ", dec = ".")
+
+summary(pnud.txt[,1:10])
+```
+
+-xls
+```{r}
+library(readxl)
+pnud.xls <- read_excel(path = "C:/Users/Mitio/Desktop/Curso R/daddos ex2/pnud.xlsx", sheet = 1)
+
+summary(pnud.xls[,1:10])
+```
+
+-rda
+(O R Markdown não reconhece o objeto "d" do arquivo rda. Mesmo renomeando o objeto. Conseguimos abrir o arquivo normalmente no R Studio)
+```{r}
+pnud.rda <- load(file = "C:/Users/Mitio/Desktop/Curso R/daddos ex2/pnud.rda",envir = parent.frame(),verbose = T)
+
+pnud.rda
+```
+
+-rds
+```{r}
+pnud.rds <- readRDS(file = "C:/Users/Mitio/Desktop/Curso R/daddos ex2/pnud.rds",refhook = NULL)
+
+summary(pnud.rds[,1:10])
+```
+
+## Parte 2 - Descritiva básica
+
+- Os seis municípios com os maiores IDH municipais em 2010.
+
+(obs: tentei não utilizar o pacote dplyr nos exercícios abaixo)
+
+```{r}
+idh <- pnud.xls[,c("municipio","idhm", "ufn")]
+idh_ord <- order(idh$idhm, decreasing = TRUE)
+idh <- idh[idh_ord,]
+
+maiores_idh <- idh[1:6,]
+maiores_idh
+```
+
+- UF com menor média de expectativa de vida, ponderada pela população dos municípios em 2000
+```{r}
+expec_2000 <- pnud.xls[pnud.xls$ano==2000,c("ano", "municipio","ufn", "espvida", "popt")]
+a <- tapply(expec_2000$popt, expec_2000$ufn, sum)
+ufn_tot<- data.frame(row.names(a),a)
+rownames(ufn_tot) <- NULL
+names(ufn_tot) <- c("ufn","popt_ufn")
+expec_2000 <- merge(expec_2000, ufn_tot, by="ufn")
+expec_2000$municipio_pond <- expec_2000$espvida*expec_2000$popt/expec_2000$popt_ufn # medias ponderadas dos municipios = população municipio * expect. vida do municipio / população UF 
+ufn_mediaUF <- data.frame(tapply(expec_2000$municipio_pond,expec_2000$ufn,mean)) # medias das UFs
+names(ufn_mediaUF) <- c("uf_media")
+ufn_mediaUF_ord<-order(ufn_mediaUF$uf_media,decreasing = F)
+menor_media <- ufn_mediaUF[ufn_mediaUF_ord,]
+menor_media[1]
+```
+
+- Municípios outiliers com relação ao índice de Gini em 1991
+```{r}
+gini <- pnud.xls[,c("ano", "municipio", "ufn","gini")]
+gini_91 <- gini[gini$ano==1991,c("municipio","ufn","gini","ano")]
+gini_91$media_91 <- mean(gini_91$gini)
+gini_91$dp_91 <- sd(gini_91$gini)
+gini_91$limite <- gini_91$media_91 + 2*(gini_91$dp_91)
+gini_91$outlier <- gini_91$gini >= gini_91$limite
+outliers_91 <- gini_91[gini_91$outlier==T,]
+outliers_91[,1]
+```
+
+- Municípios outiliers com relação ao índice de Gini em 2000
+```{r}
+gini <- pnud.xls[,c("ano", "municipio", "ufn","gini")]
+gini_00 <- gini[gini$ano==2000,c("municipio","ufn","gini","ano")]
+gini_00$media_00 <- mean(gini_00$gini)
+gini_00$dp_00 <- sd(gini_00$gini)
+gini_00$limite <- gini_00$media_00 + 2*(gini_00$dp_00)
+gini_00$outlier <- gini_00$gini >= gini_00$limite
+outliers_00 <- gini_00[gini_00$outlier==T,]
+outliers_00[,1]
+```
+
+- Categoriação da renda percapita por região em todos os anos
+```{r}
+exp_renda <- pnud.xls[,c("ano","municipio", "ufn", "rdpc","gini","espvida")]
+plot(exp_renda$espvida, exp_renda$rdpc, log = "xy", xlab = "Expectativa de vida",
+     ylab = "Renda Per Capita Média")
+exp_renda$rdpc_faixa <- cut(exp_renda$rdpc, c(0, 182.1, 299.4, 487,5000000), labels = c("muito pobres", "pobres", "classe media", "ricos"))
+exp_renda$regiao[exp_renda$ufn==c("Rondônia")]<- c("NO")
+exp_renda$regiao[exp_renda$ufn==c("Acre")]<- c("NO")
+exp_renda$regiao[exp_renda$ufn==c("Amazonas")]<- c("NO")
+exp_renda$regiao[exp_renda$ufn==c("Roraima")]<- c("NO")
+exp_renda$regiao[exp_renda$ufn==c("Pará")]<- c("NO")
+exp_renda$regiao[exp_renda$ufn==c("Amapá")]<- c("NO")
+exp_renda$regiao[exp_renda$ufn==c("Tocantins")]<- c("NO")
+exp_renda$regiao[exp_renda$ufn==c("Maranhão")]<- c("NE")
+exp_renda$regiao[exp_renda$ufn==c("Piauí")]<- c("NE")
+exp_renda$regiao[exp_renda$ufn==c("Ceará")]<- c("NE")
+exp_renda$regiao[exp_renda$ufn==c("Paraíba")]<- c("NE")
+exp_renda$regiao[exp_renda$ufn==c("Rio Grande do Norte")]<- c("NE")
+exp_renda$regiao[exp_renda$ufn==c("Pernambuco")]<- c("NE")
+exp_renda$regiao[exp_renda$ufn==c("Alagoas")]<- c("NE")
+exp_renda$regiao[exp_renda$ufn==c("Sergipe")]<- c("NE")
+exp_renda$regiao[exp_renda$ufn==c("Bahia")]<- c("NE")
+exp_renda$regiao[exp_renda$ufn==c("Espírito Santo")]<- c("SE")
+exp_renda$regiao[exp_renda$ufn==c("Rio de Janeiro")]<- c("SE")
+exp_renda$regiao[exp_renda$ufn==c("São Paulo")]<- c("SE")
+exp_renda$regiao[exp_renda$ufn==c("Paraná")]<- c("S")
+exp_renda$regiao[exp_renda$ufn==c("Santa Catarina")]<- c("S")
+exp_renda$regiao[exp_renda$ufn==c("Rio Grande do Sul")]<- c("S")
+exp_renda$regiao[exp_renda$ufn==c("Mato Grosso")]<- c("CO")
+exp_renda$regiao[exp_renda$ufn==c("Goias")]<- c("CO")
+exp_renda$regiao[exp_renda$ufn==c("Distrito Federal")]<- c("CO")
+exp_renda$regiao[exp_renda$ufn==c("Mato Grosso do Sul")]<- c("CO")
+table(exp_renda$regiao, exp_renda$rdpc_faixa)
+
+```
+Na tabela acima, observamos da predominância de municípios "ricos" nos eixos sul/sudeste e a predominância de municípios "muito pobres" no nordeste.
+ 
+- Evolução da distribuição de renda
+```{r}
+renda1991_NE <- exp_renda[c(exp_renda$ano==1991 & exp_renda$regiao=="NE") ,c("ano","municipio", "gini", "regiao")]
+renda1991_NE <- na.omit(renda1991_NE) 
+renda1991_SE <- exp_renda[c(exp_renda$ano==1991 & exp_renda$regiao=="SE") ,c("ano","municipio", "gini", "regiao")] 
+renda1991_SE <- na.omit(renda1991_SE)
+renda2000_NE <- exp_renda[c(exp_renda$ano==2000 & exp_renda$regiao=="NE") ,c("ano","municipio", "gini", "regiao")]
+renda2000_NE <- na.omit(renda2000_NE)
+renda2000_SE <- exp_renda[c(exp_renda$ano==2000 & exp_renda$regiao=="SE") ,c("ano","municipio", "gini", "regiao")] 
+renda2000_SE <- na.omit(renda2000_SE)
+renda2010_NE <- exp_renda[c(exp_renda$ano==2010 & exp_renda$regiao=="NE") ,c("ano","municipio", "gini", "regiao")]
+renda2010_NE <- na.omit(renda2010_NE)
+renda2010_SE <- exp_renda[c(exp_renda$ano==2010 & exp_renda$regiao=="SE") ,c("ano","municipio", "gini", "regiao")]
+renda2010_SE <- na.omit(renda2010_SE)
+
+mediaNE91 <- mean(renda1991_NE$gini)
+mediaNE00 <- mean(renda2000_NE$gini)
+mediaNE10 <- mean(renda2010_NE$gini)
+
+mediaSE91 <- mean(renda1991_SE$gini)
+mediaSE00 <- mean(renda2000_SE$gini)
+mediaSE10 <- mean(renda2010_SE$gini)
+
+mediasNE <- as.data.frame(c(mediaNE91,mediaNE00, mediaNE10))
+mediasSE <- as.data.frame(c(mediaSE91, mediaSE00, mediaSE10))
+mediasregioes <- cbind(mediasNE, mediasSE) 
+rownames(mediasregioes) <- c("1991","2000","2010")
+colnames(mediasregioes) <- c("SE", "NE")
+mediasregioes
+```
+ 
+Como observamos nos cálculos acima, as regiões nordeste e sudeste aumentam a concentração de renda (elevam o indice de Gini) na década de noventa, porém, a piora do nordeste é muito maior com relação ao sudeste. Na primeira década dos anos 2000, as duas regiões diminuíram sua concentração de renda. Porém a diminuição média da desigualdade foi muito maior na região nordeste do que na região sudeste.
+
+
+
+# outros estudos a respeito:
+
+- Viana (2011)
+Avalia a evolução da distribuição de renda e dos anos de estudo pelo método da curva de Lorenz e índice de Gini para as unidades federativas brasileiras. Utiliza as PNADS de 2003 e 2009. Encontra um efeito regressivo para a distribuição da escolaridade (diferente do que encontramos para a renda aqui). Semelhante ao que encontramos, aponta uma redução da concentração de renda significativa para o nordeste no período.  
+```{r}
+link_1 <- 'https://www.google.com.br/url?sa=t&rct=j&q=&esrc=s&source=web&cd=1&cad=rja&uact=8&ved=0ahUKEwiIm5HKipHLAhUCgpAKHSGOA70QFggdMAA&url=http%3A%2F%2Fanpec.org.br%2Fencontro%2F2011%2Finscricao%2Farquivos%2F000-679759c942d2bb4f74ac1590bc2da396.doc&usg=AFQjCNEM6-pZL7PDqD_IyVz6Xb0zv_V1Bg&sig2=QUPi_y-ZJNrapyZaWX9PWA'
+link_1
+```
+
+- Veloso (2013)
+Excelente coletânea com diversos artigos sob aspectos do desenvolvimento econômico. Há bons textos sobre a desigualdade de renda e de oportunidades.
+```{r}
+link_2 <- 'https://books.google.com.br/books/about/Desenvolvimento_econ%C3%B4mico.html?id=v25wkgEACAAJ&hl=pt-BR'
+```
+
+- Langoni (1973)
+Tem valor histórico. Trabalho pioneiro na avaliação e discussão das causas da desigualdade no país.
+
+```{r}
+link_3 <- 'http://bibliotecadigital.fgv.br/dspace/bitstream/handle/10438/631/000066001.pdf?sequence=1&isAllowed=y'
+link_3
+
+```
+
