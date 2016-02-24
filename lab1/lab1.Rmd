@@ -1,0 +1,142 @@
+##Laboratório 1 - Bruno Mitio A. Silva
+
+- Função "moeda"
+```{r}
+moeda <- function(p){
+  x <- runif(1)
+  if (x < p) {
+    1
+  } else {
+    0  
+  }
+}
+```
+
+- Função "moedas"
+```{r}
+moedas <- function(n, p = 0.5, i){
+  resultados <- c()
+  for(i in 1:n)
+    resultados[i] <- moeda(p)
+  resultados
+  }
+```
+
+- Função "proporcao"
+```{r}
+proporcao <- function(resultados){
+  sum(resultados)/length(resultados)
+}
+```
+
+- Função "simulacao"
+```{r}
+simulacao <- function(k, n, p = 0.5){
+  final <- c()
+  for(i in 1:k)
+    final[i] <- proporcao(moedas(n, p))
+  final
+}
+```
+
+# Testes: aumentando o 'k'
+
+- Teste 1: k = 10, n = 50, p = 0.5
+```{r}
+teste1 <- as.data.frame(simulacao(10, 50))
+
+library(dplyr)
+library(ggplot2)
+ggplot(teste1, aes(x = simulacao(10, 50)))+ 
+  geom_histogram()
+```
+
+- Teste 2: k = 50, n = 50, p = 0.5
+```{r}
+teste2 <- as.data.frame(simulacao(50, 50))
+
+ggplot(teste2, aes(x = simulacao(50, 50)))+ 
+  geom_histogram()
+```
+
+- Teste 3: k = 100, n = 50, p = 0.5
+```{r}
+teste3 <- as.data.frame(simulacao(100, 50))
+
+ggplot(teste3, aes(x = simulacao(100, 50)))+ 
+  geom_histogram()
+```
+
+- Teste 4: k = 150, n = 50, p = 0.5
+```{r}
+teste4 <- as.data.frame(simulacao(150, 50))
+
+ggplot(teste4, aes(x = simulacao(150, 50)))+ 
+  geom_histogram()
+```
+
+- Teste 5: k = 200, n = 50, p = 0.5
+```{r}
+teste5 <- as.data.frame(simulacao(200, 50))
+
+ggplot(teste5, aes(x = simulacao(200, 50)))+ 
+  geom_histogram()
+```
+
+- Teste 6: k = 250, n = 50, p = 0.5
+```{r}
+teste6 <- as.data.frame(simulacao(250, 50))
+
+ggplot(teste6, aes(x = simulacao(250, 50)))+ 
+  geom_histogram()
+```
+
+# Testes: aumentando o 'n'
+
+- Teste 7: k = 50, n = 10, p = 0.5
+```{r}
+teste7 <- as.data.frame(simulacao(50, 10))
+
+ggplot(teste7, aes(x = simulacao(50, 10)))+ 
+  geom_histogram()
+```
+
+- Teste 8: k = 50, n = 50, p = 0.5
+```{r}
+teste8 <- as.data.frame(simulacao(50, 50))
+
+ggplot(teste8, aes(x = simulacao(50, 50)))+ 
+  geom_histogram()
+```
+
+- Teste 9: k = 50, n = 100, p = 0.5
+```{r}
+teste9 <- as.data.frame(simulacao(50, 100))
+
+ggplot(teste9, aes(x = simulacao(50, 100)))+ 
+  geom_histogram()
+```
+
+- Teste 10: k = 50, n = 150, p = 0.5
+```{r}
+teste10 <- as.data.frame(simulacao(50, 150))
+
+ggplot(teste10, aes(x = simulacao(50, 150)))+ 
+  geom_histogram()
+```
+
+- Teste 11: k = 50, n = 200, p = 0.5
+```{r}
+teste11 <- as.data.frame(simulacao(50, 200))
+
+ggplot(teste11, aes(x = simulacao(50, 200)))+ 
+  geom_histogram()
+```
+
+- Teste 12: k = 50, n = 250, p = 0.5
+```{r}
+teste12 <- as.data.frame(simulacao(50, 250))
+
+ggplot(teste12, aes(x = simulacao(50, 250)))+ 
+  geom_histogram()
+```
